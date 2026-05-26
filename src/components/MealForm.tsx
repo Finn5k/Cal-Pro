@@ -21,7 +21,10 @@ export function MealForm({ userId, date, onMealAdded }: MealFormProps) {
     'lunch'
   )
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchBrand, setSearchBrand] = useState('')
   const [searchResults, setSearchResults] = useState<FoodItem[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchAttempted, setSearchAttempted] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -67,21 +70,23 @@ export function MealForm({ userId, date, onMealAdded }: MealFormProps) {
       setError(null)
 
       try {
-        // Search local database first
-        const dbResult = await searchFoodItems(trimmedQuery)
+        setIsSearching(true)
+        // Search local database first (respect brand if provided)
+        const dbResult = await searchFoodItems(trimmedQuery, searchBrand)
 
         if (dbResult.success && dbResult.items && dbResult.items.length > 0) {
           if (isActive) setSearchResults(dbResult.items)
-          return
+        } else {
+          // Try Open Food Facts API as fallback
+          const apiResults = await searchByName(trimmedQuery, searchBrand)
+          if (isActive) setSearchResults(apiResults)
         }
 
-        // Try Open Food Facts API as fallback
-        const apiResults = await searchByName(trimmedQuery)
-        if (isActive) setSearchResults(apiResults)
+        if (isActive) setSearchAttempted(true)
       } catch (err) {
         console.error('Search error:', err)
       } finally {
-        // no-op
+        if (isActive) setIsSearching(false)
       }
     }, 300)
 
@@ -96,6 +101,39 @@ export function MealForm({ userId, date, onMealAdded }: MealFormProps) {
     setSearchQuery(nextValue)
     if (nextValue.trim().length < 2) {
       setSearchResults([])
+      setSearchAttempted(false)
+    }
+  }
+
+  const handleBrandChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchBrand(e.target.value)
+  }
+
+  const doSearch = async (query?: string) => {
+    const q = (query ?? searchQuery).trim()
+    if (q.length < 2) {
+      setError('Please enter at least 2 characters for name')
+      return
+    }
+
+    setIsSearching(true)
+    setError(null)
+    setSearchResults([])
+
+    try {
+      const dbResult = await searchFoodItems(q, searchBrand)
+      if (dbResult.success && dbResult.items && dbResult.items.length > 0) {
+        setSearchResults(dbResult.items)
+      } else {
+        const apiResults = await searchByName(q, searchBrand)
+        setSearchResults(apiResults)
+      }
+      setSearchAttempted(true)
+    } catch (err) {
+      console.error('Search error:', err)
+      setError('Search failed')
+    } finally {
+      setIsSearching(false)
     }
   }
 
@@ -188,14 +226,30 @@ export function MealForm({ userId, date, onMealAdded }: MealFormProps) {
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   event.preventDefault()
+                  doSearch()
                 }
               }}
               disabled={isAdding}
             />
+            <input
+              id="food-brand"
+              type="text"
+              placeholder="Brand (optional)"
+              value={searchBrand}
+              onChange={handleBrandChange}
+              className="brand-input"
+              disabled={isAdding}
+            />
+            <button type="button" className="btn" onClick={() => doSearch()} disabled={isSearching || isAdding}>
+              {isSearching ? <Loader size={16} className="spinner" /> : 'Search'}
+            </button>
           </div>
 
+          {/* Loading bar */}
+          {isSearching && <div className="search-loading" />}
+
           {/* Search Results */}
-          {searchResults.length > 0 && (
+          {searchResults.length > 0 ? (
             <div className="search-results">
               {searchResults.map((food) => (
                 <button
@@ -204,14 +258,19 @@ export function MealForm({ userId, date, onMealAdded }: MealFormProps) {
                   className="search-result-item"
                   onClick={() => handleSelectFood(food)}
                 >
-                  <div className="search-result-name">{food.name}</div>
+                  <div>
+                    <div className="search-result-name">{food.name}</div>
+                    {food.brand && <div className="search-result-brand">{food.brand}</div>}
+                  </div>
                   <div className="search-result-macros">
                     {food.calories_per_100g} kcal
                   </div>
                 </button>
               ))}
             </div>
-          )}
+          ) : searchAttempted ? (
+            <div className="search-results empty">No results found</div>
+          ) : null}
         </div>
 
         {/* Selected Food */}

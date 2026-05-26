@@ -26,6 +26,7 @@ export interface FoodItem {
   carbs_per_100g: number;
   external_id?: string; // For Open Food Facts ID
   barcode?: string; // EAN/UPC barcode
+  brand?: string;
 }
 
 // Meal types

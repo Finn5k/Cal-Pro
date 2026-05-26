@@ -88,13 +88,14 @@ export async function searchByBarcode(barcode: string): Promise<FoodItem | null>
 /**
  * Search for food products by name
  */
-export async function searchByName(query: string, pageSize = 20): Promise<FoodItem[]> {
+export async function searchByName(query: string, brand?: string, pageSize = 20): Promise<FoodItem[]> {
   try {
     await rateLimit()
+    const brandParam = brand && brand.trim() ? `&brands=${encodeURIComponent(brand.trim())}` : ''
     const data = (await jsonp<{ products?: OpenFoodFactsProduct[] }>(
       `${JSONP_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(
         query
-      )}&action=process&json=1&page_size=${pageSize}&fields=product_name,nutriments,code`
+      )}&action=process&json=1&page_size=${pageSize}&fields=product_name,nutriments,code${brandParam}`
     )) as { products?: OpenFoodFactsProduct[] }
     return (data.products || []).map(parseFoodItem).filter(Boolean) as FoodItem[]
   } catch (error) {

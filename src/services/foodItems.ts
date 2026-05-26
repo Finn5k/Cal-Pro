@@ -32,6 +32,7 @@ export async function getOrCreateFoodItem(
         carbs_per_100g: foodData.carbs_per_100g,
         external_id: foodData.external_id,
         barcode: foodData.barcode,
+        brand: foodData.brand || null,
       })
       .select()
       .single()
@@ -47,19 +48,21 @@ export async function getOrCreateFoodItem(
 }
 
 /**
- * Search food items by name
+ * Search food items by name (optional brand)
  */
-export async function searchFoodItems(query: string): Promise<{
+export async function searchFoodItems(query: string, brand?: string): Promise<{
   success: boolean
   error?: string
   items?: FoodItem[]
 }> {
   try {
-    const { data, error } = await supabase
-      .from('food_items')
-      .select()
-      .ilike('name', `%${query}%`)
-      .limit(20)
+    let builder = supabase.from('food_items').select().ilike('name', `%${query}%`).limit(20)
+
+    if (brand && brand.trim()) {
+      builder = builder.ilike('brand', `%${brand.trim()}%`)
+    }
+
+    const { data, error } = await builder
 
     if (error) {
       return { success: false, error: error.message }
