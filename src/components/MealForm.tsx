@@ -60,39 +60,13 @@ export function MealForm({ userId, date, onMealAdded }: MealFormProps) {
 
   useEffect(() => {
     let isActive = true
-    const trimmedQuery = searchQuery.trim()
 
-    if (trimmedQuery.length < 2) {
+    if (searchQuery.trim().length < 2) {
       return
     }
 
-    const handle = window.setTimeout(async () => {
-      setError(null)
-
-      try {
-        setIsSearching(true)
-        // Search local database first (respect brand if provided)
-        const dbResult = await searchFoodItems(trimmedQuery, searchBrand)
-
-        if (dbResult.success && dbResult.items && dbResult.items.length > 0) {
-          if (isActive) setSearchResults(dbResult.items)
-        } else {
-          // Try Open Food Facts API as fallback
-          const apiResults = await searchByName(trimmedQuery, searchBrand)
-          if (isActive) setSearchResults(apiResults)
-        }
-
-        if (isActive) setSearchAttempted(true)
-      } catch (err) {
-        console.error('Search error:', err)
-      } finally {
-        if (isActive) setIsSearching(false)
-      }
-    }, 300)
-
     return () => {
       isActive = false
-      window.clearTimeout(handle)
     }
   }, [searchQuery])
 

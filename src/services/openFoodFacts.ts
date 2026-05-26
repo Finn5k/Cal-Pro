@@ -4,6 +4,8 @@ const JSONP_BASE =
   import.meta.env.VITE_OPEN_FOOD_FACTS_JSONP_BASE || 'https://world.openfoodfacts.org'
 const JSONP_TIMEOUT_MS = 10000
 
+const USER_AGENT = `Cal-Pro/1.0 (cal-pro@example.com)`
+
 // Simple rate limiter: max requests per minute
 const _requestTimestamps: number[] = []
 const MAX_PER_MINUTE = Number(import.meta.env.VITE_OFF_RATE_LIMIT || 10)
@@ -55,7 +57,8 @@ function jsonp<T>(url: string, timeoutMs = JSONP_TIMEOUT_MS): Promise<T> {
       reject(new Error('JSONP request failed'))
     }
 
-    script.src = `${url}${separator}callback=${callbackName}`
+    // Add user-agent header emulation via URL param (JSONP workaround)
+    script.src = `${url}${separator}callback=${callbackName}&user_agent=${encodeURIComponent(USER_AGENT)}`
     document.head.appendChild(script)
   })
 }
