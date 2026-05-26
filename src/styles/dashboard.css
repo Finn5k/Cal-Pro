@@ -194,6 +194,12 @@
   text-transform: uppercase;
 }
 
+.meal-empty {
+  font-size: 13px;
+  color: #999;
+  padding: 6px 4px 12px;
+}
+
 .meal-item {
   display: flex;
   justify-content: space-between;

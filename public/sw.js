@@ -9,7 +9,7 @@ const ASSETS_TO_CACHE = [
 ]
 
 // Install event - cache static assets
-self.addEventListener('install', (event: ExtendableEvent) => {
+self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE_NAME)
@@ -22,7 +22,7 @@ self.addEventListener('install', (event: ExtendableEvent) => {
 })
 
 // Activate event - clean up old caches
-self.addEventListener('activate', (event: ExtendableEvent) => {
+self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const cacheNames = await caches.keys()
@@ -37,7 +37,7 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
 })
 
 // Fetch event - network first, fall back to cache
-self.addEventListener('fetch', (event: FetchEvent) => {
+self.addEventListener('fetch', (event) => {
   const { request } = event
 
   // Skip non-GET requests

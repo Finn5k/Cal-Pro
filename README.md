@@ -9,6 +9,7 @@ A Progressive Web App for tracking daily calories and macronutrients with barcod
 - **Barcode Scanning**: Real-time camera-based barcode detection via iOS Safari
 - **Open Food Facts Integration**: Automatic food data lookup by EAN/UPC barcode
 - **Meal Logging**: Add meals with quantity tracking and instant macro calculation
+- **Meal Groups**: Breakfast, lunch, dinner, and snacks sections
 - **Daily Dashboard**: Real-time calorie progress circle and macro summary
 - **Daily Summaries**: Automatic daily total calculation triggered by meal changes
 - **iOS PWA**: Installable as app on iOS Safari with manifest and service worker

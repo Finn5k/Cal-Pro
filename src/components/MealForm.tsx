@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Loader, Camera, X, Search } from 'lucide-react'
 import type { FoodItem } from '@/types'
 import { searchByBarcode, searchByName } from '@/services/openFoodFacts'
@@ -22,7 +22,6 @@ export function MealForm({ userId, date, onMealAdded }: MealFormProps) {
   )
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<FoodItem[]>([])
-  const [isSearching, setIsSearching] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -56,32 +55,47 @@ export function MealForm({ userId, date, onMealAdded }: MealFormProps) {
     }
   }
 
-  const handleSearch = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value
-    setSearchQuery(query)
+  useEffect(() => {
+    let isActive = true
+    const trimmedQuery = searchQuery.trim()
 
-    if (query.length < 2) {
-      setSearchResults([])
+    if (trimmedQuery.length < 2) {
       return
     }
 
-    setIsSearching(true)
+    const handle = window.setTimeout(async () => {
+      setError(null)
 
-    try {
-      // Search local database first
-      const dbResult = await searchFoodItems(query)
+      try {
+        // Search local database first
+        const dbResult = await searchFoodItems(trimmedQuery)
 
-      if (dbResult.success && dbResult.items) {
-        setSearchResults(dbResult.items)
-      } else {
+        if (dbResult.success && dbResult.items && dbResult.items.length > 0) {
+          if (isActive) setSearchResults(dbResult.items)
+          return
+        }
+
         // Try Open Food Facts API as fallback
-        const apiResults = await searchByName(query)
-        setSearchResults(apiResults)
+        const apiResults = await searchByName(trimmedQuery)
+        if (isActive) setSearchResults(apiResults)
+      } catch (err) {
+        console.error('Search error:', err)
+      } finally {
+        // no-op
       }
-    } catch (err) {
-      console.error('Search error:', err)
-    } finally {
-      setIsSearching(false)
+    }, 300)
+
+    return () => {
+      isActive = false
+      window.clearTimeout(handle)
+    }
+  }, [searchQuery])
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue = e.target.value
+    setSearchQuery(nextValue)
+    if (nextValue.trim().length < 2) {
+      setSearchResults([])
     }
   }
 
@@ -171,7 +185,12 @@ export function MealForm({ userId, date, onMealAdded }: MealFormProps) {
               placeholder="Search for food..."
               value={searchQuery}
               onChange={handleSearch}
-              disabled={isSearching || isAdding}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                }
+              }}
+              disabled={isAdding}
             />
           </div>
 
@@ -238,7 +257,9 @@ export function MealForm({ userId, date, onMealAdded }: MealFormProps) {
               <select
                 id="meal-type"
                 value={mealType}
-                onChange={(e) => setMealType(e.target.value as any)}
+                onChange={(e) =>
+                  setMealType(e.target.value as 'breakfast' | 'lunch' | 'dinner' | 'snack')
+                }
                 disabled={isAdding}
               >
                 <option value="breakfast">Breakfast</option>

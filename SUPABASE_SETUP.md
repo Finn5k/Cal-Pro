@@ -93,19 +93,3 @@ WHERE user_id = auth.uid() AND date = CURRENT_DATE;
 SELECT * FROM food_items WHERE barcode = '5000112128493';
 ```
 
-## Troubleshooting
-
-### "Permission denied" errors
-- Make sure RLS policies are enabled
-- Verify user is authenticated
-- Check that auth.uid() matches user_id in policies
-
-### Daily summaries not updating
-- Ensure triggers are created
-- Check trigger logs in SQL Editor
-- Manually insert meal and check if summary updates
-
-### Meals not appearing
-- Verify user_id matches auth.uid()
-- Check that date format is YYYY-MM-DD
-- Confirm food_item_id exists in food_items table

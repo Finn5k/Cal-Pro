@@ -177,38 +177,50 @@ export function DashboardPage() {
         {/* Meals List */}
         {isLoadingData ? (
           <div className="loading-section">Loading meals...</div>
-        ) : meals.length > 0 ? (
+        ) : (
           <div className="meals-section">
             <h3>Meals</h3>
-            {['breakfast', 'lunch', 'dinner', 'snack'].map((type) => {
-              const typeMeals = meals.filter((m) => m.meal_type === type)
-              if (typeMeals.length === 0) return null
+            {[
+              { key: 'breakfast', label: 'Frühstück' },
+              { key: 'lunch', label: 'Mittagessen' },
+              { key: 'dinner', label: 'Abendessen' },
+              { key: 'snack', label: 'Snacks' },
+            ].map((type) => {
+              const typeMeals = meals.filter((m) => m.meal_type === type.key)
 
               return (
-                <div key={type} className="meal-type-group">
-                  <h4 className="meal-type-title">{type.charAt(0).toUpperCase() + type.slice(1)}</h4>
-                  {typeMeals.map((meal) => (
-                    <div key={meal.id} className="meal-item">
-                      <div className="meal-info">
-                        <div className="meal-name">{meal.food_item?.name}</div>
-                        <div className="meal-details">
-                          {meal.quantity_grams}g • {Math.round((meal.food_item?.calories_per_100g || 0) * (meal.quantity_grams / 100))} kcal
+                <div key={type.key} className="meal-type-group">
+                  <h4 className="meal-type-title">{type.label}</h4>
+                  {typeMeals.length === 0 ? (
+                    <div className="meal-empty">Keine Einträge</div>
+                  ) : (
+                    typeMeals.map((meal) => (
+                      <div key={meal.id} className="meal-item">
+                        <div className="meal-info">
+                          <div className="meal-name">{meal.food_item?.name}</div>
+                          <div className="meal-details">
+                            {meal.quantity_grams}g •{' '}
+                            {Math.round(
+                              (meal.food_item?.calories_per_100g || 0) * (meal.quantity_grams / 100)
+                            )}{' '}
+                            kcal
+                          </div>
                         </div>
+                        <button
+                          className="delete-button"
+                          onClick={() => handleDeleteMeal(meal.id)}
+                          title="Delete meal"
+                        >
+                          ✕
+                        </button>
                       </div>
-                      <button
-                        className="delete-button"
-                        onClick={() => handleDeleteMeal(meal.id)}
-                        title="Delete meal"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               )
             })}
           </div>
-        ) : null}
+        )}
 
         {/* Error Message */}
         {error && (

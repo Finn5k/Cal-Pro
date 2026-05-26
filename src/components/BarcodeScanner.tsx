@@ -15,6 +15,18 @@ export function BarcodeScanner({ onBarcodeScanned, onClose }: BarcodeCanvasProps
     let animationFrameId: number
 
     const initCamera = async () => {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError('Camera not available in this browser.')
+        setIsInitializing(false)
+        return
+      }
+
+      if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+        setError('Camera requires HTTPS or localhost.')
+        setIsInitializing(false)
+        return
+      }
+
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -26,7 +38,17 @@ export function BarcodeScanner({ onBarcodeScanned, onClose }: BarcodeCanvasProps
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream
-          setIsInitializing(false)
+          try {
+            await videoRef.current.play()
+            setIsInitializing(false)
+          } catch (playError) {
+            setError(
+              playError instanceof Error
+                ? playError.message
+                : 'Failed to start camera preview.'
+            )
+            setIsInitializing(false)
+          }
         }
       } catch (err) {
         setError(
