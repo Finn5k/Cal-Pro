@@ -4,6 +4,27 @@ const JSONP_BASE =
   import.meta.env.VITE_OPEN_FOOD_FACTS_JSONP_BASE || 'https://world.openfoodfacts.org'
 const JSONP_TIMEOUT_MS = 10000
 
+// Simple rate limiter: max requests per minute
+const _requestTimestamps: number[] = []
+const MAX_PER_MINUTE = Number(import.meta.env.VITE_OFF_RATE_LIMIT || 10)
+
+async function rateLimit(): Promise<void> {
+  const now = Date.now()
+  // remove timestamps older than 60s
+  while (_requestTimestamps.length > 0 && now - _requestTimestamps[0] > 60_000) {
+    _requestTimestamps.shift()
+  }
+
+  if (_requestTimestamps.length >= MAX_PER_MINUTE) {
+    const earliest = _requestTimestamps[0]
+    const waitMs = 60_000 - (now - earliest) + 50
+    await new Promise((res) => setTimeout(res, waitMs))
+    return rateLimit()
+  }
+
+  _requestTimestamps.push(now)
+}
+
 type JsonpResponse<T> = T | { status?: number; product?: T }
 
 function jsonp<T>(url: string, timeoutMs = JSONP_TIMEOUT_MS): Promise<T> {
@@ -44,6 +65,7 @@ function jsonp<T>(url: string, timeoutMs = JSONP_TIMEOUT_MS): Promise<T> {
  */
 export async function searchByBarcode(barcode: string): Promise<FoodItem | null> {
   try {
+    await rateLimit()
     const data = (await jsonp<JsonpResponse<OpenFoodFactsProduct>>(
       `${JSONP_BASE}/api/v0/product/${encodeURIComponent(
         barcode
@@ -68,6 +90,7 @@ export async function searchByBarcode(barcode: string): Promise<FoodItem | null>
  */
 export async function searchByName(query: string, pageSize = 20): Promise<FoodItem[]> {
   try {
+    await rateLimit()
     const data = (await jsonp<{ products?: OpenFoodFactsProduct[] }>(
       `${JSONP_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(
         query
@@ -88,13 +111,26 @@ function parseFoodItem(product: OpenFoodFactsProduct): FoodItem | null {
 
   const nutriments = product.nutriments || {}
 
+  const getN = (...keys: string[]) => {
+    for (const k of keys) {
+      const v = (nutriments as any)[k]
+      if (v !== undefined && v !== null && v !== '') return Number(v)
+    }
+    return 0
+  }
+
+  const calories = getN('energy-kcal_100g', 'energy-kcal', 'energy_100g', 'energy')
+  const protein = getN('protein_100g', 'proteins_100g', 'proteins', 'protein_100g', 'protein')
+  const fat = getN('fat_100g', 'fat')
+  const carbs = getN('carbohydrates_100g', 'carbohydrates', 'carbs')
+
   return {
     id: `off_${product.code}`,
     name: product.product_name,
-    calories_per_100g: nutriments['energy-kcal_100g'] || 0,
-    protein_per_100g: nutriments['protein_100g'] || 0,
-    fat_per_100g: nutriments['fat_100g'] || 0,
-    carbs_per_100g: nutriments['carbohydrates_100g'] || 0,
+    calories_per_100g: isNaN(calories) ? 0 : calories,
+    protein_per_100g: isNaN(protein) ? 0 : protein,
+    fat_per_100g: isNaN(fat) ? 0 : fat,
+    carbs_per_100g: isNaN(carbs) ? 0 : carbs,
     external_id: product.code,
     barcode: product.code,
   }
