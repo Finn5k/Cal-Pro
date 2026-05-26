@@ -1,0 +1,30 @@
+#!/bin/sh
+# Validate commit message follows Conventional Commits
+# Usage: installed as .git/hooks/commit-msg via core.hooksPath
+
+MSG_FILE="$1"
+if [ -z "$MSG_FILE" ]; then
+  echo "No commit message file provided"
+  exit 1
+fi
+
+# Read first non-empty line
+MSG=$(sed -n '1p' "$MSG_FILE" | sed -e 's/\r$//')
+
+# Conventional Commit pattern
+PATTERN='^(feat|fix|docs|style|refactor|perf|test|chore|build|ci|revert)(\([a-zA-Z0-9._\/-]+\))?:\s.+'
+
+echo "Checking commit message: '$MSG'"
+
+printf "%s" "$MSG" | grep -E "$PATTERN" >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "ERROR: Commit message does not follow Conventional Commits format."
+  echo "Expected: <type>(optional-scope): <description>"
+  echo "Allowed types: feat, fix, docs, style, refactor, perf, test, chore, build, ci, revert"
+  echo "Example: feat(auth): add login endpoint"
+  echo ""
+  exit 1
+fi
+
+exit 0
